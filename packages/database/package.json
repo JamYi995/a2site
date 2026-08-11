@@ -1,7 +1,7 @@
 {
-  "name": "@a2site/fastify",
-  "version": "0.2.0",
-  "description": "让 Fastify 网站支持 A2Site Agent 自动发现",
+  "name": "@a2site/database",
+  "version": "0.1.0",
+  "description": "A2Site PostgreSQL 与本地 PGlite 数据库适配层",
   "type": "module",
   "license": "Apache-2.0",
   "exports": {
@@ -17,13 +17,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@a2site/identity": "workspace:*",
-    "@a2site/protocol": "workspace:*"
-  },
-  "peerDependencies": {
-    "fastify": ">=5.0.0 <6.0.0"
+    "@electric-sql/pglite": "^0.5.4",
+    "pg": "^8.22.0"
   },
   "devDependencies": {
-    "fastify": "^5.6.1"
+    "@types/pg": "^8.20.0"
   }
 }

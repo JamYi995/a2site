@@ -7,6 +7,15 @@ export interface GatewayConfig {
   host: string;
   port: number;
   allowInsecureLocalhost: boolean;
+  nodeEnv: string;
+  databaseUrl?: string;
+  pglitePath: string;
+  identity: {
+    hashSecret: string;
+    allowedScopes: string[];
+    defaultScopes: string[];
+    emailMode: 'console';
+  };
   manifest: A2SiteManifestInput;
 }
 
@@ -25,12 +34,49 @@ function parseBoolean(value: string | undefined, fallback: boolean): boolean {
   throw new Error('布尔配置只能是 true 或 false');
 }
 
+function parseScopes(value: string): string[] {
+  const scopes = [...new Set(value.split(',').map((scope) => scope.trim()).filter(Boolean))];
+  if (scopes.length === 0) throw new Error('Agent 作用域配置不能为空');
+  return scopes;
+}
+
 export function loadGatewayConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig {
   const origin = env.A2SITE_SITE_ORIGIN ?? 'http://localhost:3200';
+  const nodeEnv = env.NODE_ENV ?? 'development';
+  const isProduction = nodeEnv === 'production';
+  const databaseUrl = env.A2SITE_DATABASE_URL?.trim() || undefined;
+  const hashSecret = env.A2SITE_AUTH_HASH_SECRET?.trim()
+    || 'local-development-only-a2site-hash-secret-change-me';
+  const allowedScopes = parseScopes(env.A2SITE_ALLOWED_SCOPES ?? 'manifest:read,identity:read');
+  const defaultScopes = parseScopes(env.A2SITE_DEFAULT_SCOPES ?? 'manifest:read,identity:read');
+  const emailMode = env.A2SITE_EMAIL_MODE?.trim() || 'console';
+
+  if (isProduction && !databaseUrl) {
+    throw new Error('生产环境必须配置 A2SITE_DATABASE_URL，不能使用本地 PGlite');
+  }
+  if (isProduction && !env.A2SITE_AUTH_HASH_SECRET?.trim()) {
+    throw new Error('生产环境必须显式配置 A2SITE_AUTH_HASH_SECRET');
+  }
+  if (isProduction && emailMode === 'console') {
+    throw new Error('生产环境必须接入正式邮件发送适配器，不能把验证码输出到终端');
+  }
+  if (emailMode !== 'console') {
+    throw new Error('独立网关当前只内置本地 console 邮件适配器；正式邮件应通过站点适配器接入');
+  }
+
   return {
     host: env.A2SITE_HOST ?? '0.0.0.0',
     port: parsePort(env.A2SITE_PORT),
     allowInsecureLocalhost: parseBoolean(env.A2SITE_ALLOW_INSECURE_LOCALHOST, true),
+    nodeEnv,
+    ...(databaseUrl ? { databaseUrl } : {}),
+    pglitePath: env.A2SITE_PGLITE_PATH?.trim() || '.data/a2site',
+    identity: {
+      hashSecret,
+      allowedScopes,
+      defaultScopes,
+      emailMode: 'console',
+    },
     manifest: {
       site: {
         id: env.A2SITE_SITE_ID ?? 'example-site',

@@ -1,0 +1,23 @@
+{
+  "name": "@a2site/identity",
+  "version": "0.1.0",
+  "description": "A2Site 外部 Agent 邮箱身份、凭证与作用域模块",
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "migrations"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@a2site/database": "workspace:*",
+    "zod": "^3.25.76"
+  }
+}

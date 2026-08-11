@@ -1,11 +1,11 @@
 {
   "name": "a2site",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.9.0",
   "scripts": {
-    "build": "pnpm --filter @a2site/protocol build && pnpm --filter @a2site/fastify build && pnpm --filter @a2site/gateway build",
+    "build": "pnpm --filter @a2site/protocol build && pnpm --filter @a2site/database build && pnpm --filter @a2site/identity build && pnpm --filter @a2site/fastify build && pnpm --filter @a2site/gateway build",
     "dev": "pnpm --filter @a2site/gateway dev",
     "start": "pnpm --filter @a2site/gateway start",
     "test": "pnpm build && pnpm -r test",

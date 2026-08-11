@@ -1,13 +1,16 @@
 import 'dotenv/config';
 import { buildApp } from './app.js';
 import { loadGatewayConfig } from './config.js';
+import { createGatewayRuntime } from './runtime.js';
 
 const config = loadGatewayConfig();
-const app = await buildApp(config);
+const runtime = await createGatewayRuntime(config);
+const app = await buildApp(config, { identityService: runtime.identityService });
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'A2Site gateway stopping');
   await app.close();
+  await runtime.database.close();
   process.exit(0);
 };
 
