@@ -16,7 +16,12 @@ export interface A2SiteFastifyOptions extends CreateManifestOptions {
 
 type JsonObject = Record<string, unknown>;
 
-async function registerIdentityRoutes(app: Parameters<FastifyPluginAsync>[0], identity: IdentityService) {
+async function registerIdentityRoutes(
+  app: Parameters<FastifyPluginAsync>[0],
+  identity: IdentityService,
+  publicOrigin: string,
+) {
+  const endpoint = (path: string) => `${publicOrigin}${path}`;
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof IdentityError) {
       return reply.code(error.statusCode).send({
@@ -50,10 +55,10 @@ async function registerIdentityRoutes(app: Parameters<FastifyPluginAsync>[0], id
       local_file_mode: '0600',
     },
     workflow: [
-      { step: 1, method: 'POST', endpoint: '/api/a2site/v1/identity/claims', action: '创建邮箱认领' },
-      { step: 2, method: 'POST', endpoint_template: '/api/a2site/v1/identity/claims/{claim_id}/challenges', action: '请求邮箱验证码' },
-      { step: 3, method: 'POST', endpoint_template: '/api/a2site/v1/identity/claims/{claim_id}/verify', action: '由 Agent 提交验证码并领取一次性明文凭证' },
-      { step: 4, method: 'GET', endpoint: '/api/a2site/v1/identity/me', action: '验证凭证与作用域' },
+      { step: 1, method: 'POST', endpoint: endpoint('/api/a2site/v1/identity/claims'), action: '创建邮箱认领' },
+      { step: 2, method: 'POST', endpoint_template: endpoint('/api/a2site/v1/identity/claims/{claim_id}/challenges'), action: '请求邮箱验证码' },
+      { step: 3, method: 'POST', endpoint_template: endpoint('/api/a2site/v1/identity/claims/{claim_id}/verify'), action: '由 Agent 提交验证码并领取一次性明文凭证' },
+      { step: 4, method: 'GET', endpoint: endpoint('/api/a2site/v1/identity/me'), action: '验证凭证与作用域' },
     ],
     security: {
       claim_secret_header: 'X-A2Site-Claim-Secret',
@@ -64,34 +69,57 @@ async function registerIdentityRoutes(app: Parameters<FastifyPluginAsync>[0], id
 
   app.post('/api/a2site/v1/identity/claims', { bodyLimit: 16_384 }, async (request) => {
     const body = (request.body ?? {}) as JsonObject;
-    return identity.createClaim({
+    const result = await identity.createClaim({
       email: body.email,
       agentName: body.agent_name,
       clientType: body.client_type,
       requestedScopes: body.requested_scopes,
       remoteAddress: request.ip,
     });
+    const next = result.next as JsonObject | undefined;
+    return {
+      ...result,
+      ...(next && typeof next.endpoint === 'string'
+        ? { next: { ...next, endpoint: endpoint(next.endpoint) } }
+        : {}),
+    };
   });
 
   app.post('/api/a2site/v1/identity/claims/:id/challenges', { bodyLimit: 1_024 }, async (request) => {
     const parameters = request.params as { id?: string };
-    return identity.sendChallenge({
+    const result = await identity.sendChallenge({
       claimId: parameters.id,
       claimSecret: request.headers['x-a2site-claim-secret'],
       remoteAddress: request.ip,
     });
+    return {
+      ...result,
+      next: {
+        method: 'POST',
+        endpoint: endpoint(`/api/a2site/v1/identity/claims/${String(parameters.id)}/verify`),
+        claim_secret_header: 'X-A2Site-Claim-Secret',
+      },
+    };
   });
 
   app.post('/api/a2site/v1/identity/claims/:id/verify', { bodyLimit: 8_192 }, async (request) => {
     const parameters = request.params as { id?: string };
     const body = (request.body ?? {}) as JsonObject;
-    return identity.verifyClaim({
+    const result = await identity.verifyClaim({
       claimId: parameters.id,
       claimSecret: request.headers['x-a2site-claim-secret'],
       challengeId: body.challenge_id,
       code: body.code,
       remoteAddress: request.ip,
     });
+    return {
+      ...result,
+      next: {
+        method: 'GET',
+        endpoint: endpoint('/api/a2site/v1/identity/me'),
+        authorization: 'Bearer {access_token}',
+      },
+    };
   });
 
   app.get('/api/a2site/v1/identity/me', async (request) => (
@@ -127,8 +155,13 @@ export const a2siteFastifyPlugin: FastifyPluginAsync<A2SiteFastifyOptions> = asy
   app.get(A2SITE_MANIFEST_PATH, routeOptions);
 
   if (options.identityService) {
+    const publicOrigin = new URL(manifest.site.origin).origin;
     await app.register(async (identityApp) => {
-      await registerIdentityRoutes(identityApp, options.identityService as IdentityService);
+      await registerIdentityRoutes(
+        identityApp,
+        options.identityService as IdentityService,
+        publicOrigin,
+      );
     });
   }
 };

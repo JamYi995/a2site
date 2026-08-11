@@ -91,6 +91,18 @@ describe('A2Site gateway', () => {
     expect(manifest.json().endpoints.identity)
       .toBe('http://localhost:3200/api/a2site/v1/identity');
 
+    const identityPlan = await app.inject({ method: 'GET', url: '/api/a2site/v1/identity' });
+    expect(identityPlan.json().workflow).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        step: 1,
+        endpoint: 'http://localhost:3200/api/a2site/v1/identity/claims',
+      }),
+      expect.objectContaining({
+        step: 2,
+        endpoint_template: 'http://localhost:3200/api/a2site/v1/identity/claims/{claim_id}/challenges',
+      }),
+    ]));
+
     const claimResponse = await app.inject({
       method: 'POST',
       url: '/api/a2site/v1/identity/claims',
@@ -98,6 +110,8 @@ describe('A2Site gateway', () => {
     });
     expect(claimResponse.statusCode).toBe(200);
     const claim = claimResponse.json();
+    expect(claim.next.endpoint)
+      .toBe(`http://localhost:3200/api/a2site/v1/identity/claims/${claim.claim_id}/challenges`);
 
     const challengeResponse = await app.inject({
       method: 'POST',
@@ -106,6 +120,8 @@ describe('A2Site gateway', () => {
     });
     expect(challengeResponse.statusCode).toBe(200);
     const challenge = challengeResponse.json();
+    expect(challenge.next.endpoint)
+      .toBe(`http://localhost:3200/api/a2site/v1/identity/claims/${claim.claim_id}/verify`);
 
     const verifyResponse = await app.inject({
       method: 'POST',
@@ -115,6 +131,7 @@ describe('A2Site gateway', () => {
     });
     expect(verifyResponse.statusCode).toBe(200);
     const credential = verifyResponse.json();
+    expect(credential.next.endpoint).toBe('http://localhost:3200/api/a2site/v1/identity/me');
 
     const meResponse = await app.inject({
       method: 'GET',
