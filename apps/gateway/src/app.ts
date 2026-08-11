@@ -22,7 +22,7 @@ export async function buildApp(
   app.get('/health', async () => ({
     ok: true,
     product: 'a2site',
-    version: '0.2.0',
+    version: '0.3.0',
   }));
 
   app.get('/api/a2site/v1/health', async (_request, reply) => {
@@ -33,7 +33,7 @@ export async function buildApp(
         return reply.code(503).send({
           ok: false,
           product: 'a2site',
-          version: '0.2.0',
+          version: '0.3.0',
           database: 'unavailable',
         });
       }
@@ -41,7 +41,7 @@ export async function buildApp(
     return {
       ok: true,
       product: 'a2site',
-      version: '0.2.0',
+      version: '0.3.0',
       database: dependencies.database ? 'ok' : 'not_checked',
     };
   });

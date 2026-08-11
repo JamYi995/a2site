@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createDatabase, runMigrations } from '@a2site/database';
 import {
@@ -39,6 +42,80 @@ describe('A2Site gateway', () => {
 
   it('拒绝错误的端口配置', () => {
     expect(() => loadGatewayConfig({ A2SITE_PORT: '70000' })).toThrow(/A2SITE_PORT/);
+  });
+
+  it('从只读动作文件加载真实站内能力', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'a2site-actions-'));
+    const actionsFile = join(directory, 'actions.json');
+    writeFileSync(actionsFile, JSON.stringify([{
+      id: 'profile.read',
+      title: '读取资料',
+      description: '读取当前已授权主体的资料摘要',
+      method: 'GET',
+      endpoint: '/api/agent/profile',
+      risk: 'low',
+      requires_auth: true,
+      requires_human_confirmation: false,
+    }]));
+
+    try {
+      const config = loadGatewayConfig({
+        A2SITE_SITE_ORIGIN: 'http://localhost:3200',
+        A2SITE_ALLOW_INSECURE_LOCALHOST: 'true',
+        A2SITE_ACTIONS_FILE: actionsFile,
+      });
+      const app = await buildApp(config);
+      const manifest = await app.inject({ method: 'GET', url: '/.well-known/a2site.json' });
+      expect(manifest.json().actions).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: 'profile.read',
+          endpoint: 'http://localhost:3200/api/agent/profile',
+        }),
+      ]));
+      await app.close();
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('动作文件拒绝未确认的高风险动作、外部端点和符号链接', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'a2site-actions-invalid-'));
+    const actionsFile = join(directory, 'actions.json');
+    const linkedFile = join(directory, 'linked.json');
+
+    try {
+      writeFileSync(actionsFile, JSON.stringify([{
+        id: 'billing.pay',
+        title: '发起付款',
+        description: '创建真实付款',
+        method: 'POST',
+        endpoint: '/api/payments',
+        risk: 'high',
+        requires_auth: true,
+        requires_human_confirmation: false,
+      }]));
+      expect(() => loadGatewayConfig({ A2SITE_ACTIONS_FILE: actionsFile }))
+        .toThrow(/高风险能力必须要求独立人工确认/);
+
+      writeFileSync(actionsFile, JSON.stringify([{
+        id: 'profile.read',
+        title: '读取资料',
+        description: '读取资料',
+        method: 'GET',
+        endpoint: 'https://outside.example/profile',
+        risk: 'low',
+        requires_auth: true,
+        requires_human_confirmation: false,
+      }]));
+      expect(() => loadGatewayConfig({ A2SITE_ACTIONS_FILE: actionsFile }))
+        .toThrow(/站内地址/);
+
+      symlinkSync(actionsFile, linkedFile);
+      expect(() => loadGatewayConfig({ A2SITE_ACTIONS_FILE: linkedFile }))
+        .toThrow(/符号链接/);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 
   it('只接受显式可信反向代理提供的客户端地址', async () => {
