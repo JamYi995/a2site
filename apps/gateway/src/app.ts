@@ -1,10 +1,12 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { a2siteFastifyPlugin } from '@a2site/fastify';
 import type { IdentityService } from '@a2site/identity';
+import type { A2SiteDatabase } from '@a2site/database';
 import type { GatewayConfig } from './config.js';
 
 export interface GatewayDependencies {
   identityService?: IdentityService;
+  database?: A2SiteDatabase;
 }
 
 export async function buildApp(
@@ -21,6 +23,27 @@ export async function buildApp(
     product: 'a2site',
     version: '0.2.0',
   }));
+
+  app.get('/api/a2site/v1/health', async (_request, reply) => {
+    if (dependencies.database) {
+      try {
+        await dependencies.database.query('SELECT 1 AS ok');
+      } catch {
+        return reply.code(503).send({
+          ok: false,
+          product: 'a2site',
+          version: '0.2.0',
+          database: 'unavailable',
+        });
+      }
+    }
+    return {
+      ok: true,
+      product: 'a2site',
+      version: '0.2.0',
+      database: dependencies.database ? 'ok' : 'not_checked',
+    };
+  });
 
   const manifest = dependencies.identityService
     ? {

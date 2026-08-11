@@ -14,7 +14,17 @@ export interface GatewayConfig {
     hashSecret: string;
     allowedScopes: string[];
     defaultScopes: string[];
-    emailMode: 'console';
+    emailMode: 'console' | 'smtp';
+    smtp?: {
+      host: string;
+      port: number;
+      secure: boolean;
+      user: string;
+      password: string;
+      fromAddress: string;
+      fromName: string;
+      replyTo?: string;
+    };
   };
   manifest: A2SiteManifestInput;
 }
@@ -40,6 +50,20 @@ function parseScopes(value: string): string[] {
   return scopes;
 }
 
+function required(env: NodeJS.ProcessEnv, key: string): string {
+  const value = env[key]?.trim();
+  if (!value) throw new Error(`邮件模式为 smtp 时必须配置 ${key}`);
+  return value;
+}
+
+function parseSmtpPort(value: string | undefined): number {
+  const port = Number(value ?? '587');
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+    throw new Error('SMTP_PORT 必须是 1 到 65535 之间的整数');
+  }
+  return port;
+}
+
 export function loadGatewayConfig(env: NodeJS.ProcessEnv = process.env): GatewayConfig {
   const origin = env.A2SITE_SITE_ORIGIN ?? 'http://localhost:3200';
   const nodeEnv = env.NODE_ENV ?? 'development';
@@ -57,12 +81,25 @@ export function loadGatewayConfig(env: NodeJS.ProcessEnv = process.env): Gateway
   if (isProduction && !env.A2SITE_AUTH_HASH_SECRET?.trim()) {
     throw new Error('生产环境必须显式配置 A2SITE_AUTH_HASH_SECRET');
   }
-  if (isProduction && emailMode === 'console') {
+  if (emailMode !== 'console' && emailMode !== 'smtp') {
+    throw new Error('A2SITE_EMAIL_MODE 只能是 console 或 smtp');
+  }
+  if (isProduction && emailMode !== 'smtp') {
     throw new Error('生产环境必须接入正式邮件发送适配器，不能把验证码输出到终端');
   }
-  if (emailMode !== 'console') {
-    throw new Error('独立网关当前只内置本地 console 邮件适配器；正式邮件应通过站点适配器接入');
-  }
+
+  const smtp = emailMode === 'smtp'
+    ? {
+        host: required(env, 'SMTP_HOST'),
+        port: parseSmtpPort(env.SMTP_PORT),
+        secure: parseBoolean(env.SMTP_SECURE, false),
+        user: required(env, 'SMTP_USER'),
+        password: required(env, 'SMTP_PASSWORD'),
+        fromAddress: required(env, 'EMAIL_FROM_ADDRESS'),
+        fromName: env.EMAIL_FROM_NAME?.trim() || 'A2Site',
+        ...(env.EMAIL_REPLY_TO?.trim() ? { replyTo: env.EMAIL_REPLY_TO.trim() } : {}),
+      }
+    : undefined;
 
   return {
     host: env.A2SITE_HOST ?? '0.0.0.0',
@@ -75,7 +112,8 @@ export function loadGatewayConfig(env: NodeJS.ProcessEnv = process.env): Gateway
       hashSecret,
       allowedScopes,
       defaultScopes,
-      emailMode: 'console',
+      emailMode,
+      ...(smtp ? { smtp } : {}),
     },
     manifest: {
       site: {

@@ -5,7 +5,10 @@ import { createGatewayRuntime } from './runtime.js';
 
 const config = loadGatewayConfig();
 const runtime = await createGatewayRuntime(config);
-const app = await buildApp(config, { identityService: runtime.identityService });
+const app = await buildApp(config, {
+  identityService: runtime.identityService,
+  database: runtime.database,
+});
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'A2Site gateway stopping');

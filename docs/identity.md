@@ -50,7 +50,7 @@
 
 ## 邮件
 
-独立网关当前只内置本地 `ConsoleEmailSender`，只允许开发环境使用。正式网站必须注入实现 `EmailSender` 的邮件适配器；没有正式适配器时生产启动失败关闭。
+独立网关内置本地 `ConsoleEmailSender` 和正式 `SmtpEmailSender`。开发环境可使用 `console`；生产环境必须使用 `smtp` 并通过服务器私有环境文件配置 SMTP。没有正式邮件配置时生产启动失败关闭，日志不会记录验证码或 SMTP 密码。
 
 ## 安全约束
 

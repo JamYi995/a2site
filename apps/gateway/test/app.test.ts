@@ -22,6 +22,10 @@ describe('A2Site gateway', () => {
     expect(health.statusCode).toBe(200);
     expect(health.json()).toMatchObject({ ok: true, product: 'a2site' });
 
+    const publicHealth = await app.inject({ method: 'GET', url: '/api/a2site/v1/health' });
+    expect(publicHealth.statusCode).toBe(200);
+    expect(publicHealth.json()).toMatchObject({ ok: true, database: 'not_checked' });
+
     const manifest = await app.inject({ method: 'GET', url: '/.well-known/a2site.json' });
     expect(manifest.statusCode).toBe(200);
     expect(manifest.json()).toMatchObject({
@@ -106,6 +110,24 @@ describe('A2Site gateway', () => {
       NODE_ENV: 'production',
       A2SITE_SITE_ORIGIN: 'https://example.com',
     })).toThrow(/A2SITE_DATABASE_URL/);
+  });
+
+  it('生产 SMTP 配置完整时允许启动配置', () => {
+    const config = loadGatewayConfig({
+      NODE_ENV: 'production',
+      A2SITE_SITE_ORIGIN: 'https://example.com',
+      A2SITE_DATABASE_URL: 'postgresql://a2site:secret@localhost/a2site',
+      A2SITE_AUTH_HASH_SECRET: 'production-hash-secret-longer-than-thirty-two-bytes',
+      A2SITE_EMAIL_MODE: 'smtp',
+      SMTP_HOST: 'smtp.example.com',
+      SMTP_PORT: '587',
+      SMTP_SECURE: 'false',
+      SMTP_USER: 'smtp-user',
+      SMTP_PASSWORD: 'smtp-password',
+      EMAIL_FROM_ADDRESS: 'agent@example.com',
+    });
+    expect(config.identity.emailMode).toBe('smtp');
+    expect(config.identity.smtp).toMatchObject({ host: 'smtp.example.com', port: 587 });
   });
 
   it('身份认领在解析前拒绝超过 16 KiB 的请求正文', async () => {

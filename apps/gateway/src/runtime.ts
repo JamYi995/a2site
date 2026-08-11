@@ -4,6 +4,7 @@ import {
   IDENTITY_MIGRATIONS,
   IdentityService,
 } from '@a2site/identity';
+import { SmtpEmailSender } from './smtp.js';
 import type { GatewayConfig } from './config.js';
 
 export interface GatewayRuntime {
@@ -17,7 +18,10 @@ export async function createGatewayRuntime(config: GatewayConfig): Promise<Gatew
     pglitePath: config.pglitePath,
   });
   await runMigrations(database, IDENTITY_MIGRATIONS);
-  const identityService = new IdentityService(database, new ConsoleEmailSender(), {
+  const emailSender = config.identity.emailMode === 'smtp'
+    ? new SmtpEmailSender(config.identity.smtp!)
+    : new ConsoleEmailSender();
+  const identityService = new IdentityService(database, emailSender, {
     siteId: String(config.manifest.site.id),
     hashSecret: config.identity.hashSecret,
     allowedScopes: config.identity.allowedScopes,

@@ -18,6 +18,10 @@
     "@a2site/identity": "workspace:*",
     "@a2site/protocol": "workspace:*",
     "dotenv": "^17.2.2",
-    "fastify": "^5.6.1"
+    "fastify": "^5.6.1",
+    "nodemailer": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^7.0.1"
   }
 }

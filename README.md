@@ -19,6 +19,7 @@ A2Site 是一个让网站能够被外部 Agent 安全发现和调用的开源接
 - 已完成凭证作用域、轮换、撤销、到期和数据库审计。
 - 已实现正式 PostgreSQL 与本地持久 PGlite 两种数据库适配器。
 - 已提供站点账号适配器，第三方网站不需要使用 A2Site 自建账号表。
+- 已提供正式 SMTP 验证码适配器和数据库健康检查，可作为独立生产服务部署。
 
 独立人工确认、问题反馈与附件是后续阶段；当前版本不会在清单中宣称尚未实现的端点。
 
@@ -41,6 +42,8 @@ corepack pnpm dev
 ```bash
 docker compose up --build
 ```
+
+单机生产部署配置见 [`deploy/single-server`](deploy/single-server/README.md)。生产服务只监听回环地址，由网站反向代理公开规范入口。
 
 ## 接入现有 Fastify 网站
 
@@ -81,6 +84,10 @@ A2Site 开源范围包括网站发现协议、Agent 身份与授权、人工确�
 6. Agent 调用 `/identity/me` 验证身份，也可以轮换或撤销当前凭证。
 
 完整接口和生产边界见 [身份与授权协议](docs/identity.md)。
+
+给 Agent 的最短连接指令：
+
+> 读取 `https://jamboxsys.com/.well-known/a2site.json`，按清单连接果酱盒子；需要邮箱验证码时再向我询问。
 
 ## 许可证与品牌
 
