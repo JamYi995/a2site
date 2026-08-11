@@ -1,0 +1,28 @@
+{
+  "name": "@a2site/fastify",
+  "version": "0.1.0",
+  "description": "让 Fastify 网站支持 A2Site Agent 自动发现",
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@a2site/protocol": "workspace:*"
+  },
+  "peerDependencies": {
+    "fastify": ">=5.0.0 <6.0.0"
+  },
+  "devDependencies": {
+    "fastify": "^5.6.1"
+  }
+}

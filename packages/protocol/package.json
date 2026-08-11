@@ -1,0 +1,26 @@
+{
+  "name": "@a2site/protocol",
+  "version": "0.1.0",
+  "description": "A2Site 网站与外部 Agent 的机器可读发现协议",
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schema/site-manifest.json": "./schema/site-manifest.schema.json"
+  },
+  "files": [
+    "dist",
+    "schema"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  }
+}

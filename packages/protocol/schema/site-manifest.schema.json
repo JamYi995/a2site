@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2site.dev/schema/site-manifest-1.0.json",
+  "title": "A2Site Agent Site Manifest",
+  "type": "object",
+  "required": ["schema_version", "site", "agent", "endpoints", "actions"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "site": {
+      "type": "object",
+      "required": ["id", "name", "origin"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "origin": { "type": "string", "format": "uri" },
+        "description": { "type": "string", "maxLength": 1000 },
+        "operator": { "type": "string", "maxLength": 200 },
+        "privacy_url": { "type": "string", "format": "uri" },
+        "terms_url": { "type": "string", "format": "uri" }
+      },
+      "additionalProperties": false
+    },
+    "agent": {
+      "type": "object",
+      "required": ["audience", "platform_provides_agent"],
+      "properties": {
+        "audience": { "const": "external_agents" },
+        "platform_provides_agent": { "const": false }
+      },
+      "additionalProperties": false
+    },
+    "endpoints": {
+      "type": "object",
+      "required": ["manifest"],
+      "properties": {
+        "manifest": { "type": "string", "format": "uri" },
+        "identity": { "type": "string", "format": "uri" },
+        "confirmations": { "type": "string", "format": "uri" },
+        "feedback": { "type": "string", "format": "uri" }
+      },
+      "additionalProperties": false
+    },
+    "actions": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "description", "method", "endpoint", "risk", "requires_auth", "requires_human_confirmation"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9._-]{0,62}[a-z0-9])?$" },
+          "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "description": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "method": { "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"] },
+          "endpoint": { "type": "string", "format": "uri" },
+          "risk": { "enum": ["low", "medium", "high"] },
+          "requires_auth": { "type": "boolean" },
+          "requires_human_confirmation": { "type": "boolean" },
+          "input_schema": { "type": "object" },
+          "output_schema": { "type": "object" }
+        },
+        "additionalProperties": false,
+        "allOf": [{
+          "if": { "properties": { "risk": { "const": "high" } } },
+          "then": { "properties": { "requires_human_confirmation": { "const": true } } }
+        }]
+      }
+    }
+  },
+  "additionalProperties": false
+}

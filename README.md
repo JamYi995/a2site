@@ -1,0 +1,73 @@
+# A2Site（果酱桥）
+
+A2Site 是一个让网站能够被外部 Agent 安全发现和调用的开源接入层，由果酱盒子发起。
+
+它不提供 Agent，也不要求用户改用某一种 Agent。Codex、Hermes、Claude、OpenClaw 或其他本地/云端 Agent，都可以通过同一套机器可读入口了解网站能力、完成授权，并在高风险操作时把用户带回网站进行独立确认。
+
+## 当前状态
+
+当前为 `0.1.0` 第一阶段：
+
+- 已完成网站能力清单协议和 JSON Schema。
+- 已完成 Fastify 接入插件。
+- 已完成可独立运行的接入网关。
+- 已提供规范发现地址 `/.well-known/a2site.json`。
+- 已兼容通用发现地址 `/.well-known/agent-site.json`。
+- 所有清单端点在输出时自动初始化为绝对地址，Agent 不需要猜测安装或调用来源。
+- 高风险能力如果没有声明独立人工确认，清单校验会直接失败。
+
+身份授权、人工确认、问题反馈与附件是后续阶段；当前版本不会在清单中宣称尚未实现的端点。
+
+## 本地运行
+
+```bash
+corepack pnpm install
+cp .env.example .env
+corepack pnpm dev
+```
+
+打开：
+
+- `http://localhost:3200/health`
+- `http://localhost:3200/.well-known/a2site.json`
+
+也可以使用 Docker：
+
+```bash
+docker compose up --build
+```
+
+## 接入现有 Fastify 网站
+
+```ts
+import Fastify from 'fastify';
+import { a2siteFastifyPlugin } from '@a2site/fastify';
+
+const app = Fastify();
+
+await app.register(a2siteFastifyPlugin, {
+  manifest: {
+    site: {
+      id: 'my-site',
+      name: '我的网站',
+      origin: 'https://example.com',
+    },
+    endpoints: {
+      manifest: '/api/a2site/v1/manifest',
+    },
+    actions: [],
+  },
+});
+```
+
+## 模块边界
+
+A2Site 开源范围包括网站发现协议、Agent 身份与授权、人工确认、反馈与附件、安全审计基础、接入工具包和基础界面。
+
+果酱盒子的 Skill/MCP 能力市场、专家经营、支付、权益、安装更新、分成结算和托管资源不属于本仓库。
+
+## 许可证与品牌
+
+代码采用 [Apache-2.0](LICENSE) 许可证。A2Site、果酱桥、果酱盒子及其标识的使用规则见 [TRADEMARK.md](TRADEMARK.md)。
+
+安全问题请不要提交公开 Issue，按 [SECURITY.md](SECURITY.md) 中的方式处理。

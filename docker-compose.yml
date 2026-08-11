@@ -1,0 +1,14 @@
+services:
+  gateway:
+    build: .
+    ports:
+      - "3200:3200"
+    environment:
+      A2SITE_HOST: 0.0.0.0
+      A2SITE_PORT: 3200
+      A2SITE_SITE_ID: example-site
+      A2SITE_SITE_NAME: 示例网站
+      A2SITE_SITE_ORIGIN: http://localhost:3200
+      A2SITE_SITE_DESCRIPTION: 一个支持外部 Agent 自动发现的示例网站
+      A2SITE_OPERATOR_NAME: Example Operator
+      A2SITE_ALLOW_INSECURE_LOCALHOST: "true"
