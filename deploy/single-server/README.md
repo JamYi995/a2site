@@ -7,6 +7,7 @@
 - 代码：`/opt/a2site/app`，只从公开 GitHub 仓库拉取；
 - 服务：`a2site-gateway.service`；
 - 监听：`127.0.0.1:3320`；
+- 可信代理：只信任同机 Nginx 的 `127.0.0.1` 和 `::1`；
 - 配置：`/etc/a2site/gateway.env`，权限 `0600`；
 - 数据库：独立 PostgreSQL 数据库 `a2site` 和最小权限角色；
 - 公网入口：`/.well-known/a2site.json`、`/.well-known/agent-site.json`、`/api/a2site/`。

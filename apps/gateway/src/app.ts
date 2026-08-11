@@ -16,6 +16,7 @@ export async function buildApp(
   const app = Fastify({
     logger: false,
     bodyLimit: 1_048_576,
+    ...(config.trustedProxies.length > 0 ? { trustProxy: config.trustedProxies } : {}),
   });
 
   app.get('/health', async () => ({

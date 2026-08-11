@@ -41,6 +41,33 @@ describe('A2Site gateway', () => {
     expect(() => loadGatewayConfig({ A2SITE_PORT: '70000' })).toThrow(/A2SITE_PORT/);
   });
 
+  it('只接受显式可信反向代理提供的客户端地址', async () => {
+    const config = loadGatewayConfig({
+      A2SITE_SITE_ORIGIN: 'http://localhost:3200',
+      A2SITE_ALLOW_INSECURE_LOCALHOST: 'true',
+      A2SITE_TRUSTED_PROXIES: '127.0.0.1,::1',
+    });
+    const app = await buildApp(config);
+    app.get('/test-client-ip', async (request) => ({ ip: request.ip }));
+
+    const trusted = await app.inject({
+      method: 'GET',
+      url: '/test-client-ip',
+      remoteAddress: '127.0.0.1',
+      headers: { 'x-forwarded-for': '203.0.113.9' },
+    });
+    expect(trusted.json()).toEqual({ ip: '203.0.113.9' });
+
+    const untrusted = await app.inject({
+      method: 'GET',
+      url: '/test-client-ip',
+      remoteAddress: '198.51.100.7',
+      headers: { 'x-forwarded-for': '203.0.113.10' },
+    });
+    expect(untrusted.json()).toEqual({ ip: '198.51.100.7' });
+    await app.close();
+  });
+
   it('通过 HTTP 完成 Agent 邮箱连接并在发现清单中公开身份入口', async () => {
     const config = loadGatewayConfig({
       A2SITE_SITE_ID: 'identity-site',

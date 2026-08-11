@@ -6,6 +6,7 @@ import {
 export interface GatewayConfig {
   host: string;
   port: number;
+  trustedProxies: string[];
   allowInsecureLocalhost: boolean;
   nodeEnv: string;
   databaseUrl?: string;
@@ -48,6 +49,11 @@ function parseScopes(value: string): string[] {
   const scopes = [...new Set(value.split(',').map((scope) => scope.trim()).filter(Boolean))];
   if (scopes.length === 0) throw new Error('Agent 作用域配置不能为空');
   return scopes;
+}
+
+function parseTrustedProxies(value: string | undefined): string[] {
+  if (!value?.trim()) return [];
+  return [...new Set(value.split(',').map((entry) => entry.trim()).filter(Boolean))];
 }
 
 function required(env: NodeJS.ProcessEnv, key: string): string {
@@ -104,6 +110,7 @@ export function loadGatewayConfig(env: NodeJS.ProcessEnv = process.env): Gateway
   return {
     host: env.A2SITE_HOST ?? '0.0.0.0',
     port: parsePort(env.A2SITE_PORT),
+    trustedProxies: parseTrustedProxies(env.A2SITE_TRUSTED_PROXIES),
     allowInsecureLocalhost: parseBoolean(env.A2SITE_ALLOW_INSECURE_LOCALHOST, true),
     nodeEnv,
     ...(databaseUrl ? { databaseUrl } : {}),
